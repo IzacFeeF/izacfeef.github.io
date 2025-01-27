@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card</title>
+    <style>
+        body {
+            background-color: #FFFF3A;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            position: relative;
+            background-color: #FFF8FF;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            border-radius: 3px;
+            margin-top: 20px;
+            border-style: solid;
+            border-color: #000;
+            border-width: 0 5px 5px 0;
+            min-width: 400px;
+        }
+
+        .info {
+            flex-grow: 1;
+            margin-right: 20px;
+        }
+
+        .gallery {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            margin-top: 20px;
+            padding: 10px;
+
+        }
+
+        .gallery-item {
+            width: 150px;
+            height: 150px;
+            margin-right: 10px;
+            border-radius: 3px;
+            flex-shrink: 0;
+            object-fit: cover;
+            border-style: solid;
+            border-color: #000;
+            border-width: 0 5px 5px 0;
+        }
+
+        .photo-container {
+            position: relative;
+        }
+
+        .photo {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 5px solid #2CC266;
+        }
+
+        /*FISHEYE*/
+
+        .fisheye-canvas {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            width: 100px;
+            height: 100px;
+            margin: 0;
+            border-radius: 50%;
+            pointer-events: none;
+            border: 5px solid #2CC266;
+        }
+
+        .photo-container:hover .fisheye-canvas {
+            display: block;
+            animation: fish-in 0.4s forwards;
+
+        }
+
+        .photo-container:not(:hover) .fisheye-canvas {
+            display: block;
+            animation: fish-out 0.4s forwards;
+        }
+
+        @keyframes fish-in {
+            0% {
+                opacity: 0
+            }
+
+            100% {
+                opacity: 1
+            }
+        }
+
+        @keyframes fish-out {
+            0% {
+                opacity: 1
+            }
+
+            100% {
+                opacity: 0
+            }
+        }
+
+        canvas {
+            display: none
+        }
+
+        /*DOTS*/
+
+        .dots-container {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #FFF;
+            display: inline-block;
+            margin-right: 5px;
+            animation: glow 2s infinite alternate;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        @keyframes glow {
+            from {
+                background-color: #FFF;
+                /* White */
+            }
+
+            to {
+                background-color: #2CC266;
+                /* Green */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="dots-container">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <div class="info">
+            <h2>Isac</h2>
+            <p>CG - MS</p>
+            <p>19 yrs</p>
+        </div>
+        <div class="photo-container">
+            <img src="profile.jpeg" alt="Profile Picture" class="photo">
+            <canvas class="fisheye-canvas"></canvas>
+        </div>
+    </div>
+
+
+    <div class="gallery">
+        <img src="image1.png" alt="Image 1" class="gallery-item">
+        <img src="image2.jpg" alt="Image 2" class="gallery-item">
+        <img src="image3.jpg" alt="Image 3" class="gallery-item">
+        <img src="image4.jpg" alt="Image 4" class="gallery-item">
+        <img src="image5.jpg" alt="Image 5" class="gallery-item">
+    </div>
+    <script>
+        const photoContainer = document.querySelector('.photo-container');
+        const img = document.querySelector('.photo');
+        const canvas = document.querySelector('.fisheye-canvas');
+        const ctx = canvas.getContext('2d');
+
+        var iw, ih;
+        var image = new Image();
+        image.src = img.src;
+
+        let animationFrameId;
+
+        photoContainer.addEventListener('mouseenter', startFisheye);
+        photoContainer.addEventListener('mouseleave', stopFisheye);
+
+        function startFisheye() {
+            canvas.style.display = "block";
+            canvas.width = photoContainer.offsetWidth;
+            canvas.height = photoContainer.offsetHeight;
+
+            if (image.complete && ih === undefined) {
+                ih = image.height;
+                iw = image.width;
+            }
+            animate();
+        }
+
+        function stopFisheye() {
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function animate(timer = 0) {
+            if (image.complete && ih !== undefined) {
+                drawFisheye(timer);
+            }
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        function easeInOut(x, pow) {
+            x = x < 0 ? 0 : x > 1 ? 1 : x;
+            var xx = Math.pow(x, pow);
+            return xx / (xx + Math.pow(1 - x, pow));
+        }
+
+
+        function drawFisheye(timer) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.globalAlpha = 1;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            var step = 1 / canvas.height;
+            var istep = ih / canvas.height;
+            var y = 0;
+            var yh = 0;
+            var curve = Math.sin(timer / 1020) + 1.2;
+            var curve2 = Math.sin(timer / 2217) + 1.4;
+            var curve3 = Math.sin(timer / 533) * Math.PI;
+            var curve4 = (Math.sin(timer / 731) + 1.1) * Math.PI;
+            var wave = 4 / (Math.PI * 1);
+            var wave1 = curve4 / (Math.PI * 1);
+
+            for (var i = 0; i < 1; i += step) {
+                var wob = Math.sin(i * wave);
+                var wide = (Math.sin(i * wave1 * 3 + curve3) + 1.0) * 100;
+                y = easeInOut(easeInOut(wob, curve), curve2);
+                yh = easeInOut(easeInOut(wob + step, curve), curve2) - y;
+                y *= ih;
+                yh *= ih;
+                ctx.drawImage(image, wide, y, iw - wide * 2, yh, 0, i * canvas.height, canvas.width, step * canvas.height);
+            }
+        }
+    </script>
+</body>
+
+</html>
